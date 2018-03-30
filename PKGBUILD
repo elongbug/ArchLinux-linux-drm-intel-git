@@ -8,8 +8,11 @@
 
 pkgbase=linux-drm-intel-fixes
 pkgdesc='Linux kernel with Latest DRM Intel Fixes branch'
+_srcname=$pkgbase
 _branch=drm-intel-fixes
-pkgver=4.16rc7
+_kernelname=${pkgbase#linux}
+: ${_kernelname:=-ARCH}
+pkgver=.739143.3eb2ce825ea1
 pkgrel=1
 arch=('x86_64')
 url='https://cgit.freedesktop.org/drm-intel/'
@@ -18,7 +21,7 @@ makedepends=('xmlto' 'kmod' 'inetutils' 'bc' 'libelf' 'git')
 options=('!strip')
 source=(
   "${pkgbase}::git://anongit.freedesktop.org/drm-intel#branch=${_branch}"
-  config         # the main kernel config file
+  config.x86_64  # the main kernel config file
   60-linux.hook  # pacman hook for depmod
   90-linux.hook  # pacman hook for initramfs regeneration
   linux.preset   # standard config files for mkinitcpio ramdisk
@@ -28,18 +31,21 @@ sha256sums=('SKIP'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '834bd254b56ab71d73f59b3221f056c72f559553c04718e350ab2a3e2991afe0'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65')
-_kernelname=${pkgbase#linux}
-: ${_kernelname:=-ARCH}
+pkgver() {
+  cd "${_srcname}"
+
+  # git describe --long | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/'
+  echo ${_kernel_rel}.$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
+}
 
 prepare() {
-  cd "${srcdir}/linux"
+  cd "${_srcname}"
 
-  cp -Tf ../config .config
+  cat "${srcdir}/config.x86_64" > ./.config
 
-  cat ../config - >.config <<END
-CONFIG_LOCALVERSION="${_kernelname}"
-CONFIG_LOCALVERSION_AUTO=n
-END
+  # set localversion to git commit
+  sed -i "s|CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION=\"-${pkgver##*.}\"|g" ./.config
+  sed -i "s|CONFIG_LOCALVERSION_AUTO=.*|CONFIG_LOCALVERSION_AUTO=n|" ./.config
 
   # set extraversion to pkgrel
   sed -i "/^EXTRAVERSION =/s/=.*/= -${pkgrel}/" Makefile
@@ -64,20 +70,19 @@ END
 }
 
 build() {
-  cd "${srcdir}/linux"
+  cd "${_srcname}"
 
   make ${MAKEFLAGS} LOCALVERSION= bzImage modules
 }
 
 _package() {
-  pkgdesc="The ${pkgbase/linux/Linux} kernel and modules"
-  [ "${pkgbase}" = "linux" ] && groups=('base')
+  pkgdesc="The Linux kernel and modules for DRM Intel"
   depends=('coreutils' 'linux-firmware' 'kmod' 'mkinitcpio>=0.7')
   optdepends=('crda: to set the correct wireless channels of your country')
   backup=("etc/mkinitcpio.d/${pkgbase}.preset")
   install=linux.install
 
-  cd "${srcdir}/linux"
+  cd "${_srcname}"
 
   # get kernel version
   _kernver="$(make LOCALVERSION= kernelrelease)"
@@ -130,7 +135,7 @@ _package() {
 _package-headers() {
   pkgdesc="Header files and scripts for building modules for ${pkgbase/linux/Linux} kernel"
 
-  cd "${srcdir}/linux"
+  cd "${_srcname}"
   local _builddir="${pkgdir}/usr/lib/modules/${_kernver}/build"
 
   install -Dt "${_builddir}" -m644 Makefile .config Module.symvers
@@ -200,7 +205,7 @@ _package-headers() {
 _package-docs() {
   pkgdesc="Kernel hackers manual - HTML documentation that comes with the ${pkgbase/linux/Linux} kernel"
 
-  cd "${srcdir}/linux"
+  cd "${_srcname}"
   local _builddir="${pkgdir}/usr/lib/modules/${_kernver}/build"
 
   mkdir -p "${_builddir}"
