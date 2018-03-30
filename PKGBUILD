@@ -1,37 +1,33 @@
 #
-# Maintainer: Mikael Eriksson <mikael_eriksson@miffe.org>
+# Maintainer: Ben Widawsky <ben@bwidawsk.net>
 #
 # Based on the linux package by:
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
+# Contributor: Gwan-gyeong Mun <elongbug@gmail.com>
 
-pkgbase=linux-mainline               # Build stock -ARCH kernel
-#pkgbase=linux-custom       # Build kernel with a different name
-_tag=v4.16-rc7
+pkgbase=linux-drm-intel-fixes
+pkgdesc='Linux kernel with Latest DRM Intel Fixes branch'
+_branch=drm-intel-fixes
 pkgver=4.16rc7
 pkgrel=1
 arch=('x86_64')
-url="https://www.kernel.org/"
+url='https://cgit.freedesktop.org/drm-intel/'
 license=('GPL2')
 makedepends=('xmlto' 'kmod' 'inetutils' 'bc' 'libelf' 'git')
 options=('!strip')
 source=(
-  "git+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git#tag=$_tag"
+  "${pkgbase}::git://anongit.freedesktop.org/drm-intel#branch=${_branch}"
   config         # the main kernel config file
   60-linux.hook  # pacman hook for depmod
   90-linux.hook  # pacman hook for initramfs regeneration
   linux.preset   # standard config files for mkinitcpio ramdisk
-)
-validpgpkeys=(
-  'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
-  '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 sha256sums=('SKIP'
             'f38927db126ec7141ea2dd70cabb2ef378552672b31db4ab621493928497abd7'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '834bd254b56ab71d73f59b3221f056c72f559553c04718e350ab2a3e2991afe0'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65')
-
 _kernelname=${pkgbase#linux}
 : ${_kernelname:=-ARCH}
 
